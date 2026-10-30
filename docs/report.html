@@ -1,0 +1,267 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Calculator DevOps — Project Report</title>
+<style>
+  @page { size: A4; margin: 12mm 13mm; }
+  * { box-sizing: border-box; }
+  body { font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+         font-size: 8.9pt; line-height: 1.34; color: #1a1a1a; margin: 0; }
+  .page { page-break-after: always; }
+  .page:last-child { page-break-after: auto; }
+  h1 { font-size: 15.5pt; margin: 0 0 1mm; color: #1d3557; letter-spacing: -0.2px; }
+  .sub { font-size: 8.8pt; color: #555; margin: 0 0 1.4mm; }
+  .meta { font-size: 8pt; color: #666; border-bottom: 1.6pt solid #1d3557;
+          padding-bottom: 1.8mm; margin-bottom: 2.6mm; }
+  h2 { font-size: 10.3pt; color: #1d3557; margin: 3mm 0 1.3mm;
+       border-bottom: 0.6pt solid #c8d3e0; padding-bottom: 0.7mm; }
+  h3 { font-size: 9.1pt; color: #2a4d6e; margin: 2.2mm 0 0.8mm; }
+  p { margin: 0 0 1.4mm; text-align: justify; }
+  code { font-family: "SF Mono", Menlo, Consolas, monospace; font-size: 8pt;
+         background: #eef2f6; padding: 0 0.6mm; border-radius: 2px; }
+  table { width: 100%; border-collapse: collapse; margin: 1.3mm 0 1.8mm; font-size: 8.1pt; }
+  th { background: #1d3557; color: #fff; text-align: left; padding: 1.2mm 1.5mm; font-weight: 600; }
+  td { padding: 1.1mm 1.5mm; border-bottom: 0.4pt solid #dde3ea; vertical-align: top; }
+  tr:nth-child(even) td { background: #f6f8fa; }
+  .fig { margin: 1.6mm 0 2mm; text-align: center; }
+  .cap { font-size: 7.5pt; color: #666; font-style: italic; margin-top: 0.8mm; }
+  .foot { position: fixed; bottom: 3.5mm; left: 0; right: 0; text-align: center;
+          font-size: 7.2pt; color: #999; }
+  /* screenshot grid — object-fit keeps any aspect ratio from breaking the layout */
+  .grid { display: flex; flex-wrap: wrap; gap: 3mm 4mm; margin: 1.6mm 0 0; }
+  .shot { flex: 1 1 calc(50% - 2mm); }
+  .shot.full { flex: 1 1 100%; }
+  .shot img { width: 100%; height: 56mm; object-fit: contain; object-position: center top;
+              background: #f6f8fa; border: 0.5pt solid #c8d3e0; border-radius: 2px;
+              display: block; padding: 1mm; }
+  .shot.wide img { height: 64mm; }
+  .shot.tall img { height: 75mm; }
+  .shot .lbl { font-size: 7.5pt; color: #444; margin-top: 0.9mm; line-height: 1.3; }
+  .shot .lbl b { color: #1d3557; }
+</style>
+</head>
+<body>
+
+<!-- ======================= PAGE 1 ======================= -->
+<div class="page">
+  <h1>Calculator DevOps — CI/CD Pipeline</h1>
+  <p class="sub">A Spring Boot REST calculator built, tested, containerised, published and deployed automatically on every push.</p>
+  <p class="meta"><b>CSE 816 — Software Production Engineering, Mini-Project</b> &nbsp;·&nbsp; Sanyam Verma
+  &nbsp;·&nbsp; M.Tech CSE 2026–27 &nbsp;·&nbsp; 30 October 2026<br>
+  Repository: <code>github.com/sanyamvermaa/calculator-devops</code> &nbsp;·&nbsp;
+  Image: <code>hub.docker.com/r/sanyamvermaa/calculator-devops</code></p>
+
+  <h2>1. Overview</h2>
+  <p>This project wraps a deliberately small application — a four-operation arithmetic REST API — in a
+  complete, working delivery pipeline. The application is simple on purpose, so the engineering effort
+  sits where the course places it: in the automation around the code rather than the code itself. A
+  single <code>git push</code> to <code>main</code> compiles the project, runs fourteen tests, builds a
+  container image, publishes it to Docker Hub under a unique build tag, rolls the running deployment
+  forward, verifies the new container is healthy, and emails the outcome.</p>
+  <p>The API exposes <code>/api/v1/add</code>, <code>/api/v1/subtract</code>,
+  <code>/api/v1/multiply</code> and <code>/api/v1/divide</code>, each taking <code>a</code> and
+  <code>b</code> as query parameters and returning
+  <code>{"operation":"add","a":2.0,"b":3.0,"result":5.0}</code>. Three failure modes return HTTP 400
+  with a structured body carrying a timestamp, status, reason phrase, message and request path:
+  division by zero, a missing parameter, and a non-numeric parameter. Spring Actuator supplies
+  <code>/actuator/health</code>, reused three times over — by the Compose health check, by the
+  <code>depends_on</code> gate holding nginx back until the API is ready, and by the pipeline's
+  deployment verification step.</p>
+
+  <h2>2. Architecture</h2>
+  <div class="fig">
+    <svg width="680" height="94" viewBox="0 0 660 92" xmlns="http://www.w3.org/2000/svg">
+      <defs><marker id="ar" markerWidth="7" markerHeight="7" refX="6" refY="2.5" orient="auto">
+        <path d="M0,0 L6,2.5 L0,5 Z" fill="#5b7fa6"/></marker></defs>
+      <rect x="0" y="6" width="92" height="30" rx="4" fill="#495867"/>
+      <text x="46" y="20" font-size="8.5" fill="#fff" text-anchor="middle" font-family="Helvetica">git push</text>
+      <text x="46" y="30" font-size="8.5" fill="#fff" text-anchor="middle" font-family="Helvetica">→ GitHub</text>
+      <line x1="94" y1="21" x2="112" y2="21" stroke="#5b7fa6" stroke-width="1.4" marker-end="url(#ar)"/>
+      <text x="103" y="48" font-size="6.4" fill="#777" text-anchor="middle" font-family="Helvetica">webhook</text>
+      <g font-family="Helvetica">
+        <rect x="116" y="6" width="80" height="30" rx="4" fill="#2d6a4f"/>
+        <text x="156" y="17" font-size="8.3" fill="#fff" text-anchor="middle">1 Checkout</text>
+        <text x="156" y="28" font-size="6.8" fill="#cfe8da" text-anchor="middle">checkout scm</text>
+        <rect x="204" y="6" width="80" height="30" rx="4" fill="#2d6a4f"/>
+        <text x="244" y="17" font-size="8.3" fill="#fff" text-anchor="middle">2 Build</text>
+        <text x="244" y="28" font-size="6.8" fill="#cfe8da" text-anchor="middle">mvn package</text>
+        <rect x="292" y="6" width="80" height="30" rx="4" fill="#2d6a4f"/>
+        <text x="332" y="17" font-size="8.3" fill="#fff" text-anchor="middle">3 Test</text>
+        <text x="332" y="28" font-size="6.8" fill="#cfe8da" text-anchor="middle">14 tests + XML</text>
+        <rect x="380" y="6" width="80" height="30" rx="4" fill="#2d6a4f"/>
+        <text x="420" y="17" font-size="8.3" fill="#fff" text-anchor="middle">4 Docker Build</text>
+        <text x="420" y="28" font-size="6.8" fill="#cfe8da" text-anchor="middle">:$BUILD_NUMBER</text>
+        <rect x="468" y="6" width="80" height="30" rx="4" fill="#2d6a4f"/>
+        <text x="508" y="17" font-size="8.3" fill="#fff" text-anchor="middle">5 Push</text>
+        <text x="508" y="28" font-size="6.8" fill="#cfe8da" text-anchor="middle">Docker Hub</text>
+        <rect x="556" y="6" width="80" height="30" rx="4" fill="#bf8b2e"/>
+        <text x="596" y="17" font-size="8.3" fill="#fff" text-anchor="middle">6 Deploy</text>
+        <text x="596" y="28" font-size="6.8" fill="#fbead0" text-anchor="middle">compose up -d</text>
+      </g>
+      <g stroke="#5b7fa6" stroke-width="1.4" marker-end="url(#ar)">
+        <line x1="198" y1="21" x2="202" y2="21"/><line x1="286" y1="21" x2="290" y2="21"/>
+        <line x1="374" y1="21" x2="378" y2="21"/><line x1="462" y1="21" x2="466" y2="21"/>
+        <line x1="550" y1="21" x2="554" y2="21"/>
+      </g>
+      <path d="M332 38 L332 52 L596 52 L596 38" stroke="#b23a48" stroke-width="1.1" fill="none" stroke-dasharray="3,2"/>
+      <text x="464" y="61" font-size="6.9" fill="#b23a48" text-anchor="middle" font-family="Helvetica">a failing test stops the chain — nothing is pushed or deployed</text>
+      <rect x="248" y="68" width="164" height="20" rx="4" fill="#495867"/>
+      <text x="330" y="81" font-size="7.6" fill="#fff" text-anchor="middle" font-family="Helvetica">post { } → email on SUCCESS / FAILURE</text>
+    </svg>
+    <div class="cap"><b>Figure 1</b> — Architecture of the whole pipeline. Six stages run in sequence; any red stage halts the rest.</div>
+  </div>
+
+  <div class="fig">
+    <svg width="520" height="130" viewBox="0 0 470 118" xmlns="http://www.w3.org/2000/svg" font-family="Helvetica">
+      <defs><marker id="ar2" markerWidth="7" markerHeight="7" refX="6" refY="2.5" orient="auto">
+        <path d="M0,0 L6,2.5 L0,5 Z" fill="#5b7fa6"/></marker></defs>
+      <rect x="10" y="4" width="120" height="20" rx="3" fill="#495867"/>
+      <text x="70" y="17.5" font-size="8" fill="#fff" text-anchor="middle">browser / curl</text>
+      <line x1="70" y1="26" x2="70" y2="38" stroke="#5b7fa6" stroke-width="1.4" marker-end="url(#ar2)"/>
+      <text x="118" y="35" font-size="7" fill="#777" text-anchor="middle">host port 80 — the only one published</text>
+      <rect x="6" y="42" width="458" height="70" rx="5" fill="none" stroke="#9fb3c8" stroke-width="1" stroke-dasharray="4,3"/>
+      <text x="455" y="107" font-size="7" fill="#7b8ea3" text-anchor="end">bridge network: calc-net</text>
+      <rect x="20" y="54" width="128" height="40" rx="4" fill="#1d3557"/>
+      <text x="84" y="70" font-size="8.4" fill="#fff" text-anchor="middle">nginx :80</text>
+      <text x="84" y="82" font-size="6.9" fill="#b9cbe0" text-anchor="middle">reverse proxy</text>
+      <line x1="150" y1="74" x2="186" y2="74" stroke="#5b7fa6" stroke-width="1.4" marker-end="url(#ar2)"/>
+      <text x="168" y="69" font-size="6.6" fill="#777" text-anchor="middle">proxy_pass</text>
+      <rect x="190" y="50" width="160" height="48" rx="4" fill="#2d6a4f"/>
+      <text x="270" y="66" font-size="8.4" fill="#fff" text-anchor="middle">calculator :8080</text>
+      <text x="270" y="77" font-size="6.9" fill="#cfe8da" text-anchor="middle">Spring Boot, non-root uid 100</text>
+      <text x="270" y="88" font-size="6.9" fill="#cfe8da" text-anchor="middle">expose only — no host port</text>
+      <path d="M352 74 L382 74" stroke="#bf8b2e" stroke-width="1.4" marker-end="url(#ar2)"/>
+      <rect x="386" y="58" width="72" height="32" rx="4" fill="#bf8b2e"/>
+      <text x="422" y="71" font-size="7.2" fill="#fff" text-anchor="middle">healthcheck</text>
+      <text x="422" y="81" font-size="6.5" fill="#fbead0" text-anchor="middle">/actuator/health</text>
+    </svg>
+    <div class="cap"><b>Figure 2</b> — Deployment topology. nginx is the single public entry point; the application port is reachable only inside <code>calc-net</code>.</div>
+  </div>
+
+  <table>
+    <tr><th style="width:17%">Stage</th><th style="width:30%">What it runs</th><th>What it produces, and what makes it fail</th></tr>
+    <tr><td><b>1 Checkout</b></td><td><code>checkout scm</code>, <code>git log -1</code></td>
+        <td>A clean workspace at the triggering commit; the log line records which commit produced the artefact.</td></tr>
+    <tr><td><b>2 Build</b></td><td><code>./mvnw clean package -DskipTests</code></td>
+        <td>The fat JAR. Tests are skipped here so a compile error surfaces as a build failure, not buried in test output.</td></tr>
+    <tr><td><b>3 Test</b></td><td><code>./mvnw test</code>, <code>junit</code> in <code>post{always}</code></td>
+        <td>14 tests plus Surefire XML for the trend graph. One red test ends the run — nothing is built, pushed or deployed.</td></tr>
+    <tr><td><b>4 Docker Build</b></td><td><code>docker build -t $IMAGE:$BUILD_NUMBER -t $IMAGE:latest .</code></td>
+        <td>One image, two tags: the build number is an immutable identity, <code>latest</code> the convenience pointer.</td></tr>
+    <tr><td><b>5 Push</b></td><td><code>docker login --password-stdin</code> in <code>withCredentials</code></td>
+        <td>Both tags on Docker Hub. The token is scoped to the block, masked in the console, and piped via stdin, never <code>-p</code>.</td></tr>
+    <tr><td><b>6 Deploy</b></td><td><code>compose pull</code>, <code>up -d --remove-orphans</code>, health poll</td>
+        <td>The live stack moved to the new image. Fails if health does not report <code>UP</code> within two minutes.</td></tr>
+  </table>
+  <div class="foot">Calculator DevOps — CSE 816 Mini-Project Report · Page 1 of 3</div>
+</div>
+
+<!-- ======================= PAGE 2 ======================= -->
+<div class="page">
+  <h2>3. The pipeline in action</h2>
+  <p>The pipeline is a declarative <code>Jenkinsfile</code> committed at the repository root, so the
+  automation is versioned alongside the code it builds. A GitHub webhook delivers the push event to
+  Jenkins through an ngrok tunnel, with <code>Poll SCM</code> on a hashed two-minute schedule as a
+  fallback. The evidence below is a single end-to-end run: the commit landed, every stage went green,
+  the image reached Docker Hub and the notification arrived — with no manual step in between.</p>
+
+  <div class="grid">
+    <div class="shot tall">
+      <img src="screenshots/02-jenkins-pipeline-success.png" alt="Jenkins pipeline success">
+      <div class="lbl"><b>Figure 3</b> — All six stages green. Checkout through Deploy completed in sequence;
+      the build number shown here is the same tag applied to the image in Figure 5.</div>
+    </div>
+    <div class="shot tall">
+      <img src="screenshots/03-jenkins-tests-passed.png" alt="Jenkins test results">
+      <div class="lbl"><b>Figure 4</b> — The Test stage's published JUnit XML: 14 tests, 0 failures.
+      Jenkins parses <code>target/surefire-reports/*.xml</code> to produce this and the pass/fail trend.</div>
+    </div>
+    <div class="shot tall">
+      <img src="screenshots/06-dockerhub-latest-tag.png" alt="Docker Hub tags">
+      <div class="lbl"><b>Figure 5</b> — The image on Docker Hub. Every build publishes two tags:
+      an immutable <code>:${BUILD_NUMBER}</code> and a moving <code>:latest</code>.</div>
+    </div>
+    <div class="shot tall">
+      <img src="screenshots/07-email-notification.png" alt="Email notification">
+      <div class="lbl"><b>Figure 6</b> — The notification sent from the <code>post { success }</code> block
+      via the Email Extension plugin, carrying the job, build number, image tag and a link to the console.</div>
+    </div>
+  </div>
+
+  <h3>Idempotence and zero-downtime re-runs</h3>
+  <p>The Deploy stage never calls <code>docker compose down</code>: tearing the stack down and back up
+  would create a visible outage on every build, including during the live demo. <code>up -d</code>
+  compares desired state against running state and recreates only the services whose image or definition
+  changed, so re-running an unchanged build is a no-op and an application-only change leaves nginx
+  untouched. <code>--remove-orphans</code> clears containers left by an older revision of the Compose
+  file, and because each build tags a distinct image, consecutive runs never contend over a shared
+  mutable tag.</p>
+  <div class="foot">Calculator DevOps — CSE 816 Mini-Project Report · Page 2 of 3</div>
+</div>
+
+<!-- ======================= PAGE 3 ======================= -->
+<div class="page">
+  <h2>4. The deployed stack, verified</h2>
+  <div class="grid">
+    <div class="shot wide">
+      <img src="screenshots/04-docker-compose-terminal.png" alt="docker compose ps">
+      <div class="lbl"><b>Figure 7</b> — <code>docker compose ps</code>: <code>calculator</code> reports
+      <code>(healthy)</code> because Actuator answers the container health check, and only
+      <code>calc-nginx</code> binds a host port.</div>
+    </div>
+    <div class="shot wide">
+      <img src="screenshots/05-local-testing.png" alt="API responses">
+      <div class="lbl"><b>Figure 8</b> — Live responses through the proxy: each operation returns the
+      JSON shape the specification mandates, and divide-by-zero returns HTTP 400 with the structured
+      <code>ApiError</code> body.</div>
+    </div>
+  </div>
+
+  <h2>5. Challenges faced and how they were resolved</h2>
+  <h3>5.1 &nbsp;HTTP 400 from <code>/actuator/health</code> through the reverse proxy</h3>
+  <p>The API worked through nginx, but <code>curl http://localhost/actuator/health</code> returned a
+  Tomcat 400 page — which would have failed the Deploy stage's verification on every build. When
+  <code>proxy_pass</code> targets a named upstream, nginx sends that <i>name</i> as the <code>Host</code>
+  header, and the upstream was called <code>calc_backend</code>; Tomcat treats an underscore in a
+  hostname as illegal and rejects the request before it reaches Spring. The <code>/api/</code> block had
+  escaped the bug only because it overrode <code>Host</code> with <code>$host</code>. Fixed by renaming
+  the upstream to <code>calc-backend</code> and setting the forwarding headers in both blocks — caught
+  by testing the Compose stack locally before writing the Jenkinsfile.</p>
+
+  <h3>5.2 &nbsp;Integration tests silently not running</h3>
+  <p>Surefire's default includes are <code>*Test.java</code>, <code>Test*.java</code> and
+  <code>*Tests.java</code>. The MockMvc class follows the <code>*IT.java</code> convention, so
+  <code>mvn test</code> reported seven passing tests and a green build while executing none of the
+  integration suite — the worst kind of failure, because it looks like success. Resolved with an explicit
+  <code>&lt;includes&gt;</code> block covering both patterns; the count rising from 7 to 14 confirmed it.</p>
+
+  <h3>5.3 &nbsp;Keeping the Docker Hub token out of the repository</h3>
+  <p>A password in the Jenkinsfile fails the rubric and leaks the credential to anyone who clones the
+  repository. The credential is stored in the Jenkins credentials store under the ID
+  <code>dockerhub-creds</code> and bound by <code>withCredentials</code>, which scopes it to that block
+  and masks it in console output. It is a revocable access token, not the account password. Separately,
+  <code>.gitignore</code> excludes <code>.env</code>, <code>*.pem</code> and <code>*.key</code>, and was
+  committed on its own as the very first commit so no later <code>git add</code> could track
+  <code>target/</code> or a secret by accident.</p>
+
+  <h3>5.4 &nbsp;A fixed sleep is not a health check</h3>
+  <p>The first Deploy stage waited <code>sleep 15</code> then curled the health endpoint. On a cold JVM
+  this intermittently fired early, failing a build whose artefact was perfectly good. Replaced with a
+  bounded retry loop — up to twenty-four attempts five seconds apart, succeeding the moment the response
+  contains <code>"status":"UP"</code>. That turns a race into a deterministic check, and on genuine
+  failure it prints <code>compose ps</code> and the container logs before exiting non-zero.</p>
+
+  <h2>6. Future work</h2>
+  <p>The repository is structured so the end-of-semester capstone extends it rather than replaces it:
+  provisioning the deployment host with <b>Ansible</b> instead of configuring it by hand; replacing the
+  Compose stack with <b>Kubernetes</b> manifests to gain rolling updates, readiness gates and horizontal
+  scaling from the same image and the same health endpoint; and adding <b>Prometheus and Grafana</b>
+  against the Actuator metrics endpoint, so the pipeline reports not only that a deployment succeeded but
+  how the deployed service then behaves. A rollback stage keyed on the previous build number is a small
+  addition the existing per-build image tagging already makes possible.</p>
+  <div class="foot">Calculator DevOps — CSE 816 Mini-Project Report · Page 3 of 3</div>
+</div>
+
+</body>
+</html>
