@@ -13,6 +13,9 @@ pipeline {
         timestamps()                                  // every log line gets a timestamp
         timeout(time: 20, unit: 'MINUTES')
         buildDiscarder(logRotator(numToKeepStr: '15'))
+        disableConcurrentBuilds()                     // webhook and Poll SCM can fire for the
+                                                      // same commit; queue instead of racing
+                                                      // over the 'calculator' container name
     }
 
     stages {

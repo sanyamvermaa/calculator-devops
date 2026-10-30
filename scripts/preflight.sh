@@ -2,29 +2,31 @@
 # Pre-demo smoke check. Run ~10 minutes before the live demo.
 set -e
 
+fail() { echo "FAILED — fix this before demoing"; exit 1; }
+
 GITHUB_USER="sanyamvermaa"
 DOCKERHUB_USER="sanyamvermaa"
 
 echo "=== 1. docker daemon ==="
-docker info > /dev/null && echo OK
+docker info > /dev/null && echo OK || fail
 
 echo "=== 2. jenkins up ==="
-curl -fsSI http://localhost:8080 > /dev/null && echo OK
+curl -fsS http://localhost:8080/login > /dev/null && echo OK || fail
 
 echo "=== 3. ngrok tunnel ==="
 curl -s http://localhost:4040/api/tunnels | grep -o 'https://[^"]*ngrok[^"]*' | head -1
 
 echo "=== 4. compose stack healthy ==="
 docker compose ps
-curl -fsS http://localhost/actuator/health && echo "" && echo OK
+curl -fsS http://localhost/actuator/health && echo "" && echo OK || fail
 
 echo "=== 5. API responds through nginx ==="
-curl -fsS 'http://localhost/api/v1/add?a=2&b=3' && echo "" && echo OK
+curl -fsS 'http://localhost/api/v1/add?a=2&b=3' && echo "" && echo OK || fail
 
 echo "=== 6. GitHub repo reachable ==="
-curl -fsSI "https://github.com/${GITHUB_USER}/calculator-devops" > /dev/null && echo OK
+curl -fsSI "https://github.com/${GITHUB_USER}/calculator-devops" > /dev/null && echo OK || fail
 
 echo "=== 7. Docker Hub repo exists ==="
-curl -fsSI "https://hub.docker.com/r/${DOCKERHUB_USER}/calculator-devops" > /dev/null && echo OK
+curl -fsSI "https://hub.docker.com/r/${DOCKERHUB_USER}/calculator-devops" > /dev/null && echo OK || fail
 
 echo "" && echo "All preflight checks passed — ready to demo."
