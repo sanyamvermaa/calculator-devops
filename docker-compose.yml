@@ -1,0 +1,40 @@
+services:
+
+  calculator:
+    # Image produced by Jenkins (Ch 8); DOCKER_IMAGE lets the pipeline inject
+    # the exact build-number tag it just pushed.
+    image: ${DOCKER_IMAGE:-sanyamvermaa/calculator-devops:latest}
+    container_name: calculator
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+      - JAVA_TOOL_OPTIONS=-Xms128m -Xmx384m
+      - SERVER_PORT=8080
+    networks:
+      - calc-net
+    expose:
+      - "8080"              # internal only; nginx reaches it
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/actuator/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    restart: unless-stopped
+
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: calc-nginx
+    depends_on:
+      calculator:
+        condition: service_healthy
+    ports:
+      - "80:80"             # public entry point
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    networks:
+      - calc-net
+    restart: unless-stopped
+
+networks:
+  calc-net:
+    driver: bridge
