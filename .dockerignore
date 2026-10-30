@@ -1,0 +1,31 @@
+# .dockerignore
+
+# --- Maven output: HUGE, and we rebuild it inside the image anyway ---
+target/
+
+# --- Local Maven cache (if you have ~/.m2 somewhere inside) ---
+.m2/
+
+# --- Git metadata — not needed in the image ---
+.git/
+.gitignore
+
+# --- IDE junk ---
+.idea/
+.vscode/
+*.iml
+
+# --- Docs & scripts not needed at build time ---
+README.md
+docs/
+scripts/
+
+# --- OS junk ---
+.DS_Store
+Thumbs.db
+
+# --- Secrets ---
+.env
+.env.*
+*.pem
+*.key
