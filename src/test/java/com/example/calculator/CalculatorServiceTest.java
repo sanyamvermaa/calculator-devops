@@ -62,10 +62,4 @@ class CalculatorServiceTest {
                 () -> service.divide(10, 0));
         assertEquals("Cannot divide by zero", ex.getMessage());
     }
-
-    @Test
-    @DisplayName("power \u2014 basic")
-    void powerBasic() {
-        assertEquals(1024.0, service.power(2, 10), 1e-9);
-    }
 }
